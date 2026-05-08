@@ -1,3 +1,4 @@
+![dl logo and project overview](images/dl.png)
 # dl
 
 `dl` is a C++20 distributed locks and leases library built on the sibling `mt` library.
