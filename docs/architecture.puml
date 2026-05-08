@@ -1,0 +1,67 @@
+@startuml
+title dl Architecture
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+actor "Application Code" as app
+actor "HTTP Caller" as httpCaller
+
+package "dl public API" {
+  component "LeaseManager\ninclude/dl/lease_manager.hpp" as leaseManager
+  component "LeaseService\ninclude/dl/lease_service.hpp" as leaseService
+  component "LeaseHttpServer\ninclude/dl/lease_http_server.hpp" as leaseHttpServer
+}
+
+package "dl implementation" {
+  component "lease_manager.cpp" as leaseManagerImpl
+  component "lease_service.cpp" as leaseServiceImpl
+  component "lease_http_server.cpp" as leaseHttpServerImpl
+}
+
+package "Private mt table mapping" {
+  database "leases\nsrc/tables/schemas/lease.mt.json" as leaseSchema
+  component "LeaseRowMapping\nsrc/tables/generated/lease_row.hpp" as leaseRow
+}
+
+package "Dependencies" {
+  component "mt::Database" as mtDatabase
+  component "mt::Transaction" as mtTransaction
+  component "cpp-httplib" as httplib
+}
+
+httpCaller --> leaseHttpServer : HTTP requests\n/v1/leases/*
+leaseHttpServer --> leaseHttpServerImpl
+leaseHttpServerImpl --> httplib : routes + bind/listen
+leaseHttpServerImpl --> leaseService : parsed JSON requests
+
+app --> leaseManager : in-process lease operations
+app --> leaseService : optional JSON/status facade
+leaseService --> leaseServiceImpl
+leaseServiceImpl --> leaseManager : acquire / renew / release / get
+leaseManager --> leaseManagerImpl
+
+leaseManagerImpl --> mtDatabase : table provider
+leaseManagerImpl --> mtTransaction : optimistic transaction
+leaseManagerImpl --> leaseRow : typed get / put
+leaseRow --> leaseSchema : generated from
+leaseRow --> mtDatabase : collection metadata
+
+note right of leaseManager
+  Backend-neutral core API.
+  Does not depend on HTTP or JSON transport.
+end note
+
+note bottom of leaseManagerImpl
+  Lease safety comes from mt point reads,
+  absent-key reads, put validation,
+  and commit-time conflict detection.
+end note
+
+note right of leaseSchema
+  resourceKey -> holderId,
+  fencingToken, expiresAtMs, updatedAtMs
+end note
+
+@enduml
