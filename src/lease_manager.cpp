@@ -1,4 +1,4 @@
-#include "dl/lease_client.hpp"
+#include "dl/lease_manager.hpp"
 
 #include "mt/table.hpp"
 #include "mt/transaction.hpp"
@@ -67,13 +67,13 @@ bool is_current_holder(
 
 } // namespace
 
-LeaseClient::LeaseClient(mt::Database& database)
+LeaseManager::LeaseManager(mt::Database& database)
     : database_(&database)
 {
     (void)lease_table(*database_);
 }
 
-std::optional<Lease> LeaseClient::try_acquire(AcquireLeaseRequest request) const
+std::optional<Lease> LeaseManager::try_acquire(AcquireLeaseRequest request) const
 {
     mt::TransactionProvider txs{*database_};
 
@@ -83,7 +83,7 @@ std::optional<Lease> LeaseClient::try_acquire(AcquireLeaseRequest request) const
     );
 }
 
-std::optional<Lease> LeaseClient::try_acquire(
+std::optional<Lease> LeaseManager::try_acquire(
     mt::Transaction& tx,
     AcquireLeaseRequest request
 ) const
@@ -110,7 +110,7 @@ std::optional<Lease> LeaseClient::try_acquire(
     return to_public_lease(row);
 }
 
-std::optional<Lease> LeaseClient::renew(RenewLeaseRequest request) const
+std::optional<Lease> LeaseManager::renew(RenewLeaseRequest request) const
 {
     mt::TransactionProvider txs{*database_};
 
@@ -119,7 +119,7 @@ std::optional<Lease> LeaseClient::renew(RenewLeaseRequest request) const
     );
 }
 
-std::optional<Lease> LeaseClient::renew(
+std::optional<Lease> LeaseManager::renew(
     mt::Transaction& tx,
     RenewLeaseRequest request
 ) const
@@ -139,14 +139,14 @@ std::optional<Lease> LeaseClient::renew(
     return to_public_lease(*row);
 }
 
-bool LeaseClient::release(ReleaseLeaseRequest request) const
+bool LeaseManager::release(ReleaseLeaseRequest request) const
 {
     mt::TransactionProvider txs{*database_};
 
     return txs.run([&](mt::Transaction& tx) -> bool { return release(tx, std::move(request)); });
 }
 
-bool LeaseClient::release(
+bool LeaseManager::release(
     mt::Transaction& tx,
     ReleaseLeaseRequest request
 ) const
@@ -165,7 +165,7 @@ bool LeaseClient::release(
     return true;
 }
 
-std::optional<Lease> LeaseClient::get(const GetLeaseRequest& request) const
+std::optional<Lease> LeaseManager::get(const GetLeaseRequest& request) const
 {
     auto leases = lease_table(*database_);
     auto row = leases.get(lease_key(request.resource_key));
@@ -176,7 +176,7 @@ std::optional<Lease> LeaseClient::get(const GetLeaseRequest& request) const
     return to_public_lease(*row);
 }
 
-std::optional<Lease> LeaseClient::get(
+std::optional<Lease> LeaseManager::get(
     mt::Transaction& tx,
     const GetLeaseRequest& request
 ) const

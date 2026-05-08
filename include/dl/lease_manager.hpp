@@ -49,10 +49,10 @@ struct GetLeaseRequest
     std::string resource_key;
 };
 
-class LeaseClient
+class LeaseManager
 {
   public:
-    explicit LeaseClient(mt::Database& database);
+    explicit LeaseManager(mt::Database& database);
 
     std::optional<Lease> try_acquire(AcquireLeaseRequest request) const;
     std::optional<Lease> try_acquire(

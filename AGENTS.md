@@ -5,8 +5,8 @@
 This repository is a small C++20 distributed locks and leases library built on the sibling `mt`
 library.
 
-- `include/dl/lease_client.hpp` contains the public lease API.
-- `src/lease_client.cpp` contains the lease implementation.
+- `include/dl/lease_manager.hpp` contains the public lease API.
+- `src/lease_manager.cpp` contains the lease implementation.
 - `src/tables/schemas/` contains private `mt_codegen.py` schema metadata.
 - `src/tables/generated/` contains generated row and mapping headers. Do not edit these by hand;
   update the matching schema and run codegen.
@@ -60,7 +60,7 @@ Run `make codegen-check` after changing files in `src/tables/schemas/` or
 - Use the `dl` namespace for public lease types and `dl::tables` for generated rows.
 - Prefer value-oriented structs and straightforward helper functions over new abstractions unless
   the change clearly reduces complexity.
-- Keep backend-specific details behind `mt::Database`; `dl::LeaseClient` should remain
+- Keep backend-specific details behind `mt::Database`; `dl::LeaseManager` should remain
   backend-neutral.
 
 ## Lease Semantics

@@ -58,7 +58,7 @@ The safety property comes from `mt`:
 ## Initial API Sketch
 
 ```cpp
-dl::LeaseClient leases{database};
+dl::LeaseManager leases{database};
 
 auto acquired = leases.try_acquire(
     dl::AcquireLeaseRequest{
@@ -122,7 +122,7 @@ the other `mt`-based repos:
 ## Roadmap
 
 - implement lease row schema and generated mapping
-- implement `LeaseClient`
+- implement `LeaseManager`
 - add acquire, renew, release, get, and expire behavior
 - add fencing tokens
 - add memory backend tests for races and expiry

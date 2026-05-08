@@ -1,5 +1,5 @@
 #include "catch2/catch_amalgamated.hpp"
-#include "dl/lease_client.hpp"
+#include "dl/lease_manager.hpp"
 #include "mt/backends/memory.hpp"
 #include "mt/database.hpp"
 #include "mt/transaction.hpp"
@@ -14,7 +14,7 @@ struct TestContext
     std::shared_ptr<mt::backends::memory::MemoryBackend> backend =
         std::make_shared<mt::backends::memory::MemoryBackend>();
     mt::Database database{backend};
-    dl::LeaseClient leases{database};
+    dl::LeaseManager leases{database};
 };
 
 } // namespace
