@@ -1,0 +1,253 @@
+openapi: 3.0.3
+info:
+  title: dl Lease API
+  version: 0.1.0
+  description: HTTP API for acquiring, renewing, releasing, and inspecting distributed leases.
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+tags:
+  - name: Leases
+    description: Distributed lease operations
+paths:
+  /v1/leases/{resource_key}:
+    get:
+      tags:
+        - Leases
+      summary: Get a lease
+      operationId: getLease
+      parameters:
+        - $ref: "#/components/parameters/ResourceKey"
+      responses:
+        "200":
+          description: Lease found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lease"
+        "404":
+          description: No lease row exists for the resource.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+  /v1/leases/{resource_key}:acquire:
+    post:
+      tags:
+        - Leases
+      summary: Try to acquire a lease
+      description: Acquires the lease when no unexpired lease exists for the resource.
+      operationId: acquireLease
+      parameters:
+        - $ref: "#/components/parameters/ResourceKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcquireLeaseRequest"
+      responses:
+        "200":
+          description: Lease acquired.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lease"
+        "409":
+          description: The resource already has an unexpired lease.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+  /v1/leases/{resource_key}:renew:
+    post:
+      tags:
+        - Leases
+      summary: Renew a lease
+      description: Renews only when holder id and fencing token match the current unexpired lease.
+      operationId: renewLease
+      parameters:
+        - $ref: "#/components/parameters/ResourceKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenewLeaseRequest"
+      responses:
+        "200":
+          description: Lease renewed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lease"
+        "409":
+          description: The lease is missing, expired, or owned by another holder or fencing token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+  /v1/leases/{resource_key}:release:
+    post:
+      tags:
+        - Leases
+      summary: Release a lease
+      description: Releases only when holder id and fencing token match the current unexpired lease.
+      operationId: releaseLease
+      parameters:
+        - $ref: "#/components/parameters/ResourceKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReleaseLeaseRequest"
+      responses:
+        "204":
+          description: Lease released.
+        "409":
+          description: The lease is missing, expired, or owned by another holder or fencing token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+components:
+  parameters:
+    ResourceKey:
+      name: resource_key
+      in: path
+      required: true
+      description: Resource key identifying the lease.
+      schema:
+        type: string
+        minLength: 1
+      example: queue:orders:consumer
+  responses:
+    UnexpectedError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Lease:
+      type: object
+      required:
+        - resource_key
+        - holder_id
+        - fencing_token
+        - expires_at_ms
+        - updated_at_ms
+      properties:
+        resource_key:
+          type: string
+          minLength: 1
+          example: queue:orders:consumer
+        holder_id:
+          type: string
+          minLength: 1
+          example: worker-1
+        fencing_token:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 7
+        expires_at_ms:
+          type: integer
+          format: int64
+          description: Lease expiry timestamp in caller-defined epoch milliseconds.
+          example: 1715000030000
+        updated_at_ms:
+          type: integer
+          format: int64
+          description: Last lease update timestamp in caller-defined epoch milliseconds.
+          example: 1715000000000
+    AcquireLeaseRequest:
+      type: object
+      required:
+        - holder_id
+        - ttl_ms
+        - now_ms
+      properties:
+        holder_id:
+          type: string
+          minLength: 1
+          example: worker-1
+        ttl_ms:
+          type: integer
+          format: int64
+          minimum: 0
+          example: 30000
+        now_ms:
+          type: integer
+          format: int64
+          description: Caller-supplied current timestamp in milliseconds.
+          example: 1715000000000
+    RenewLeaseRequest:
+      type: object
+      required:
+        - holder_id
+        - fencing_token
+        - ttl_ms
+        - now_ms
+      properties:
+        holder_id:
+          type: string
+          minLength: 1
+          example: worker-1
+        fencing_token:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 7
+        ttl_ms:
+          type: integer
+          format: int64
+          minimum: 0
+          example: 30000
+        now_ms:
+          type: integer
+          format: int64
+          description: Caller-supplied current timestamp in milliseconds.
+          example: 1715000010000
+    ReleaseLeaseRequest:
+      type: object
+      required:
+        - holder_id
+        - fencing_token
+        - now_ms
+      properties:
+        holder_id:
+          type: string
+          minLength: 1
+          example: worker-1
+        fencing_token:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 7
+        now_ms:
+          type: integer
+          format: int64
+          description: Caller-supplied current timestamp in milliseconds.
+          example: 1715000020000
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: lease_conflict
+        message:
+          type: string
+          example: resource already has an unexpired lease
