@@ -1,0 +1,88 @@
+@startuml
+title dl Lease Lifecycle Sequence
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+actor "HTTP Caller" as caller
+participant "LeaseHttpServer" as http
+participant "LeaseService" as service
+participant "LeaseManager" as manager
+participant "mt::TransactionProvider" as txs
+participant "mt::Transaction" as tx
+participant "LeaseRowMapping" as row
+database "mt backend" as backend
+
+== Acquire ==
+
+caller -> http : POST /v1/leases/{resource_key}:acquire
+http -> service : acquire_lease(resource_key, json)
+service -> manager : try_acquire(request)
+manager -> txs : run(callback)
+txs -> tx : begin
+manager -> row : key(resource_key)
+manager -> tx : get lease row
+tx -> backend : point read
+
+alt no row or expired row
+  manager -> tx : put holder, fencing_token, expires_at_ms
+  tx -> backend : commit with read/write validation
+  manager --> service : Lease
+  service --> http : 200 + lease JSON
+  http --> caller : acquired lease
+else unexpired lease exists
+  manager --> service : no lease
+  service --> http : 409 lease_conflict
+  http --> caller : acquire rejected
+end
+
+== Renew ==
+
+caller -> http : POST /v1/leases/{resource_key}:renew
+http -> service : renew_lease(resource_key, json)
+service -> manager : renew(request)
+manager -> txs : run(callback)
+txs -> tx : begin
+manager -> tx : get lease row
+tx -> backend : point read
+
+alt holder id and fencing token match current unexpired lease
+  manager -> tx : put extended expires_at_ms
+  tx -> backend : commit with point-read validation
+  manager --> service : Lease
+  service --> http : 200 + lease JSON
+  http --> caller : renewed lease
+else missing, expired, wrong holder, or stale token
+  manager --> service : no lease
+  service --> http : 409 lease_conflict
+  http --> caller : renew rejected
+end
+
+== Release ==
+
+caller -> http : POST /v1/leases/{resource_key}:release
+http -> service : release_lease(resource_key, json)
+service -> manager : release(request)
+manager -> txs : run(callback)
+txs -> tx : begin
+manager -> tx : get lease row
+tx -> backend : point read
+
+alt holder id and fencing token match current unexpired lease
+  manager -> tx : put expires_at_ms = now_ms
+  tx -> backend : commit with point-read validation
+  manager --> service : released
+  service --> http : 204 no content
+  http --> caller : released lease
+else missing, expired, wrong holder, or stale token
+  manager --> service : not released
+  service --> http : 409 lease_conflict
+  http --> caller : release rejected
+end
+
+note right of manager
+  Release expires the row instead of deleting it
+  so future acquisitions keep fencing tokens monotonic.
+end note
+
+@enduml
