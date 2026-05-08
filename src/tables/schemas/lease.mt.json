@@ -1,0 +1,18 @@
+{
+  "namespace": "dl::tables",
+  "table_name": "leases",
+  "class_name": "LeaseRow",
+  "key": "resourceKey",
+  "schema_version": 1,
+  "fields": [
+    {"name": "resourceKey", "type": "string", "required": true},
+    {"name": "holderId", "type": "string", "required": true},
+    {"name": "fencingToken", "type": "int64", "required": true},
+    {"name": "expiresAtMs", "type": "int64", "required": true},
+    {"name": "updatedAtMs", "type": "int64", "required": true}
+  ],
+  "indexes": [
+    {"name": "idx_lease_holder", "path": "$.holderId"},
+    {"name": "idx_lease_expires_at", "path": "$.expiresAtMs"}
+  ]
+}
