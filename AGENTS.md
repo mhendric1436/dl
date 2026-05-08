@@ -6,12 +6,18 @@ This repository is a small C++20 distributed locks and leases library built on t
 library.
 
 - `include/dl/lease_manager.hpp` contains the public lease API.
+- `include/dl/lease_service.hpp` contains JSON/status mapping for the HTTP API.
+- `include/dl/lease_http_server.hpp` contains the cpp-httplib server wrapper.
 - `src/lease_manager.cpp` contains the lease implementation.
+- `src/lease_service.cpp` contains service request validation and response serialization.
+- `src/lease_http_server.cpp` contains HTTP route registration and JSON parsing.
 - `src/tables/schemas/` contains private `mt_codegen.py` schema metadata.
 - `src/tables/generated/` contains generated row and mapping headers. Do not edit these by hand;
   update the matching schema and run codegen.
 - `tests/` contains Catch2 unit tests for lease behavior.
 - `third_party/catch2/` contains the vendored Catch2 amalgamated files.
+- `third_party/httplib/` contains the vendored cpp-httplib header for HTTP transport.
+- `api/openapi.yaml` contains the OpenAPI v3 HTTP API contract.
 - `images/` contains README imagery.
 
 The non-vendored dependency is `mt`, expected by the Makefile at `$(HOME)/repos/mt`.
@@ -48,7 +54,8 @@ Run `make codegen-check` after changing files in `src/tables/schemas/` or
 - Run `make test` after code changes when feasible.
 - Run `make codegen-check` after schema or generated-header changes.
 - Run `make format-check` or `make format` when touching C++ files.
-- Keep vendored third-party code limited to Catch2 unless the user explicitly asks otherwise.
+- Keep vendored third-party code limited to Catch2 and cpp-httplib unless the user explicitly asks
+  otherwise.
 - Include a suggested git commit message after every code or documentation change.
 - After every code generation change, report which generated files changed and whether
   `make codegen-check` passed.
@@ -62,6 +69,8 @@ Run `make codegen-check` after changing files in `src/tables/schemas/` or
   the change clearly reduces complexity.
 - Keep backend-specific details behind `mt::Database`; `dl::LeaseManager` should remain
   backend-neutral.
+- Keep HTTP-specific details behind `LeaseService` and `LeaseHttpServer`; do not make
+  `LeaseManager` depend on httplib or JSON transport concerns.
 
 ## Lease Semantics
 
@@ -106,8 +115,11 @@ asks for versioning or migration behavior.
 - For acquire behavior, test missing rows, unexpired conflicts, and expired replacement.
 - For renew and release behavior, test wrong holders, stale fencing tokens, and expired leases.
 - For fencing behavior, verify that tokens increase monotonically across expiry and release.
+- For HTTP API behavior, test `LeaseService` request validation, status mapping, and JSON response
+  bodies. Keep `LeaseHttpServer` route handlers thin.
 
 ## Documentation
 
 - Keep `README.md` examples aligned with the public API.
 - Keep contributor and agent guidance aligned with the actual Makefile targets.
+- Keep `api/openapi.yaml` aligned with `LeaseService` routes, field names, and status codes.

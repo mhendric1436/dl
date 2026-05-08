@@ -11,7 +11,8 @@ model settles.
 - `clang-format`
 - sibling `mt` checkout at `$(HOME)/repos/mt`
 
-The repository vendors Catch2 under `third_party/catch2/`.
+The repository vendors Catch2 under `third_party/catch2/` and cpp-httplib under
+`third_party/httplib/`.
 
 ## Build And Test
 
@@ -61,6 +62,8 @@ Please preserve these behaviors unless the contribution explicitly changes them:
 - The caller supplies `now_ms`; `dl` does not own clock synchronization.
 - Public convenience APIs should have matching `mt::Transaction&` overloads where callers may need
   atomic composition with other `mt` users.
+- HTTP support should stay layered over `LeaseService` and `LeaseHttpServer`; keep transport and
+  JSON concerns out of `LeaseManager`.
 
 ## Tests
 
@@ -75,10 +78,13 @@ Good tests should cover observable lease behavior, especially:
 - release success and rejection cases
 - fencing-token monotonicity
 - caller-owned transaction overloads
+- HTTP service request validation and status mapping
 
 ## Documentation
 
 Keep `README.md` examples aligned with the public API.
+
+Keep `api/openapi.yaml` aligned with the implemented HTTP routes, field names, and status codes.
 
 Update `AGENTS.md` when build targets, generated files, repository layout, or project-specific
 agent rules change.

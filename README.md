@@ -86,6 +86,17 @@ if (acquired)
 The exact API can evolve, but v1 should keep the library backend-neutral by accepting an
 `mt::Database&` and using private `mt_codegen.py` table mappings internally.
 
+## HTTP API
+
+`dl` also includes an optional cpp-httplib transport layer for HTTP use cases:
+
+- `dl::LeaseService` maps JSON requests and lease results to HTTP-oriented status codes.
+- `dl::LeaseHttpServer` registers the HTTP routes and delegates behavior to `LeaseService`.
+- `api/openapi.yaml` defines the OpenAPI v3 contract.
+
+The in-process `LeaseManager` remains backend-neutral and does not depend on HTTP transport
+details.
+
 ## Relationship To `qu`
 
 `qu` can use `dl` as the reusable lease primitive for message claims:
@@ -113,7 +124,6 @@ the other `mt`-based repos:
 ## Non-Goals For V1
 
 - no external lock service
-- no network server
 - no clock synchronization protocol
 - no blocking wait API
 - no fairness guarantee
