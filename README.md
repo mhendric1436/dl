@@ -86,6 +86,26 @@ if (acquired)
 The exact API can evolve, but v1 should keep the library backend-neutral by accepting an
 `mt::Database&` and using private `mt_codegen.py` table mappings internally.
 
+## Trust Domain
+
+`dl` is currently targeted at a single administrative trust domain. The intended callers are
+cooperating services that are already part of the same control plane, deployment, or internal
+platform boundary.
+
+That means:
+
+- resource keys are trusted coordination names, not security boundaries
+- holder IDs are caller-provided identifiers, not authenticated principals
+- `now_ms` is caller supplied so cooperating components can use a shared time source
+- the HTTP layer is a transport convenience for internal services, not a complete public
+  multi-tenant lease service
+
+For a true multi-tenant deployment, a service built on `dl` should add tenant identity,
+authorization, resource-key namespacing, TTL policy limits, request auditing, and server-side time
+ownership before exposing lease operations to mutually untrusted callers. In that model,
+`LeaseManager` should remain the backend-neutral primitive while the outer service layer enforces
+tenant isolation and policy.
+
 ## HTTP API
 
 `dl` also includes an optional cpp-httplib transport layer for HTTP use cases:
@@ -95,7 +115,7 @@ The exact API can evolve, but v1 should keep the library backend-neutral by acce
 - `api/openapi.yaml` defines the OpenAPI v3 contract.
 
 The in-process `LeaseManager` remains backend-neutral and does not depend on HTTP transport
-details.
+details. The current HTTP routes assume the same single-trust-domain model described above.
 
 ## Relationship To `qu`
 
